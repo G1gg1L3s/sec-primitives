@@ -9,9 +9,9 @@ edition = "2021"
 hex = "0.4"
 num-bigint = { version = "0.4", features = ["rand"] }
 num-integer = "0.1"
-# num-primes = "0.2"
 num-traits = "0.2"
 rand = "0.8"
+sha2 = "0.9.8"
 thiserror = "1.0"
 
 [dev-dependencies]

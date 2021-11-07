@@ -1,3 +1,5 @@
+/// This is actually taken from https://github.com/AtropineTears/num-primes
+/// But with some refactoring and fixing
 use num_bigint::{BigUint, RandBigInt};
 use num_integer::Integer;
 use num_traits::{One, ToPrimitive, Zero};
