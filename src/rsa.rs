@@ -17,6 +17,8 @@ const EXP: u64 = 65537;
 pub enum RsaError {
     #[error("message is too long")]
     MsgTooLong,
+    #[error("decryption error")]
+    Decrypt,
 }
 
 #[derive(Debug, Error)]
@@ -41,6 +43,10 @@ pub struct RsaPublic {
 }
 
 impl RsaPrivate {
+    pub fn decrypt_oaep_sha256(&self, ciphertext: &[u8]) -> Result<Vec<u8>, RsaError> {
+        oaep::decrypt::<Sha256>(self, ciphertext)
+    }
+
     pub(crate) fn decrypt_raw(&self, num: &BigUint) -> Result<BigUint, &'static str> {
         if num >= &self.n {
             return Err("data length is larger than modulus");
@@ -178,11 +184,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn rsa_enc_dec() {
+    fn rsa_enc_dec_raw() {
         let data = BigUint::parse_bytes(b"6675636b696e67206c616273", 16).unwrap();
         let (public, private) = generate_rsa_pair(1024).unwrap();
         let ciphertext = public.encrypt_raw(&data).unwrap();
         let plaintext = private.decrypt_raw(&ciphertext).unwrap();
         assert_eq!(plaintext, data);
+    }
+
+    #[test]
+    fn rsa_enc_dec() {
+        let data = b"my fancy data";
+        let (public, private) = generate_rsa_pair(1024).unwrap();
+        let mut rng = rand::thread_rng();
+        let ciphertext = public.encrypt_oaep_sha256(&mut rng, data).unwrap();
+        let plaintext = private.decrypt_oaep_sha256(&ciphertext).unwrap();
+        assert_eq!(plaintext, data);
+    }
+
+    #[test]
+    fn rsa_enc_distorb_dec() {
+        let data = b"my fancy data";
+        let (public, private) = generate_rsa_pair(1024).unwrap();
+        let mut rng = rand::thread_rng();
+        let mut ciphertext = public.encrypt_oaep_sha256(&mut rng, data).unwrap();
+        // oops
+        ciphertext[17] = !ciphertext[17];
+        let plaintext = private.decrypt_oaep_sha256(&ciphertext);
+        assert!(plaintext.is_err());
     }
 }
