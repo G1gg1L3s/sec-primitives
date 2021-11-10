@@ -9,3 +9,11 @@ Right now it contains:
 - [x] RSA {en|de}cryption with OAEP-SHA256 padding
 - [x] ECDSA signing/verification
 - [ ] Hybrid encryption
+
+## Tests
+
+There is some number of tests for each primitive. I think it would be expanded in the future, but by know try:
+
+```bash
+$ cargo test
+```
