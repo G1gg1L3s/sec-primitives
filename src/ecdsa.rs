@@ -192,6 +192,50 @@ fn just_hash<D: Digest>(msg: &[u8]) -> Output<D> {
     hasher.finalize()
 }
 
+pub mod curves {
+    use lazy_static::lazy_static;
+
+    use super::*;
+
+    lazy_static! {
+        /// P-256 NIST Curve described here:
+        /// https://csrc.nist.gov/csrc/media/publications/fips/186/2/archive/2000-01-27/documents/fips186-2.pdf
+        /// Is considered unsafe (http://safecurves.cr.yp.to/index.html)
+        pub static ref P256: SigningParams = {
+            let p: BigInt =
+                "115792089210356248762697446949407573530086143415290314195533631308867097853951"
+                    .parse()
+                    .unwrap();
+
+            let a = BigInt::from(-3).mod_floor(&p);
+            let b = BigInt::parse_bytes(
+                b"5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b",
+                16,
+            )
+            .unwrap();
+
+            let order: BigInt =
+                "115792089210356248762697446949407573529996955224135760342422259061068512044369"
+                    .parse()
+                    .unwrap();
+            let x = BigInt::parse_bytes(
+                b"6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296",
+                16,
+            )
+            .unwrap();
+
+            let y = BigInt::parse_bytes(
+                b"4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5",
+                16,
+            )
+            .unwrap();
+            let curve = ec::Curve::new(a, b, p.to_biguint().unwrap()).unwrap();
+            let gen = Point::new(x, y);
+            SigningParams { curve, gen, order }
+        };
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use num_bigint::BigUint;
@@ -258,5 +302,17 @@ mod tests {
         let verifier = signer.verifying_key();
 
         verifier.verify(data.as_bytes(), &sig).unwrap_err();
+    }
+
+    #[test]
+    fn ecdsa_p256_sign_verify() {
+        let params = &curves::P256;
+        let data = "👾";
+        let signer = SigningKey::random(rand::thread_rng(), params);
+
+        let sig = signer.sign(rand::thread_rng(), data.as_bytes());
+        let verifier = signer.verifying_key();
+
+        verifier.verify(data.as_bytes(), &sig).unwrap();
     }
 }
