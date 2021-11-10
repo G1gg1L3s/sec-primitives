@@ -9,6 +9,9 @@ use crate::{algo, prime::ver};
 pub enum EcError {
     #[error("N is not a prime")]
     ModulusisNotAPrime { a: BigInt, b: BigInt, n: BigUint },
+
+    #[error("signature is not valid")]
+    InvalidSignature,
 }
 
 /// Curve in Weierstrass form
@@ -40,6 +43,10 @@ impl std::fmt::Debug for Point {
 }
 
 impl Curve {
+    /// Creates new curve in Weierstrass form: y^2 = x^3 + ax + b (mod n)
+    /// n should be prime, and if not, error is returned.
+    // TODO: This is getting ridiculous. Should not have mixed the Bigint and
+    // BigUint
     pub fn new(a: BigInt, b: BigInt, n: BigUint) -> Result<Self, EcError> {
         if ver::is_prime(&n) {
             Ok(Self { a, b, n: n.into() })
@@ -81,6 +88,11 @@ impl Point {
             Point::Affine { x, y } => Some((x, y)),
             Point::Infinity => None,
         }
+    }
+
+    /// Returns true if point is at infinity
+    pub fn is_infinity(&self) -> bool {
+        matches!(self, &Point::Infinity)
     }
 
     /// Adds self to rhs in curve
