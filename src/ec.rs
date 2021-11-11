@@ -12,6 +12,9 @@ pub enum EcError {
 
     #[error("signature is not valid")]
     InvalidSignature,
+
+    #[error("public key is invalid")]
+    InvalidPublicKey,
 }
 
 /// Curve in Weierstrass form
@@ -150,6 +153,20 @@ impl Point {
             Self::Infinity => true,
             Self::Affine { x, y } => (y.pow(2) - curve.value_at(x)).mod_floor(&curve.n).is_zero(),
         }
+    }
+
+    pub fn serialize(&self) -> Vec<u8> {
+        let infinite = self.is_infinity() as u8;
+        let mut buff = vec![b'^', infinite];
+
+        if let Self::Affine { x, y } = self {
+            buff.push(b'|');
+            buff.append(&mut x.to_bytes_be().1);
+            buff.push(b'|');
+            buff.append(&mut y.to_bytes_be().1);
+        }
+        buff.push(b'$');
+        buff
     }
 }
 

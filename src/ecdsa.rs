@@ -13,23 +13,23 @@ use sha2::{digest::Output, Digest, Sha256};
 use crate::ec::{self, EcError, Invmod, Point};
 
 /// All parameters that are required for ECDSA signing
-pub struct SigningParams {
+pub struct CurveParams {
     curve: ec::Curve,
     order: BigInt,
     gen: ec::Point,
 }
 
 /// Private key for the signature generation
-pub struct SigningKey<'a> {
+pub struct PrivateKey<'a> {
     /// secret number d
     secret: BigInt,
-    params: &'a SigningParams,
+    params: &'a CurveParams,
 }
 
 /// Key for verification
-pub struct VerifyingKey<'a> {
+pub struct PublicKey<'a> {
     public: Point,
-    params: &'a SigningParams,
+    params: &'a CurveParams,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -38,10 +38,10 @@ pub struct Signature {
     s: BigInt,
 }
 
-impl<'a> SigningKey<'a> {
-    pub fn random(mut rng: impl Rng, curve: &'a SigningParams) -> Self {
+impl<'a> PrivateKey<'a> {
+    pub fn random(curve: &'a CurveParams) -> Self {
         let one = BigInt::one();
-        let secret = rng.gen_bigint_range(&one, &curve.order);
+        let secret = rand::thread_rng().gen_bigint_range(&one, &curve.order);
         Self {
             secret,
             params: curve,
@@ -94,11 +94,22 @@ impl<'a> SigningKey<'a> {
     }
 
     /// Returns appropriate public key
-    pub fn verifying_key(&self) -> VerifyingKey<'a> {
+    pub fn public_key(&self) -> PublicKey<'a> {
         let public = self.params.gen.mul(self.secret.clone(), &self.params.curve);
-        VerifyingKey {
+        PublicKey {
             public,
             params: self.params,
+        }
+    }
+
+    /// Returns shared secret as in ECDH
+    pub fn shared_secret(&self, public: &PublicKey<'a>) -> Result<ec::Point, EcError> {
+        let valid = public.check_consistency();
+        if valid {
+            let point = public.public.mul(self.secret.clone(), &self.params.curve);
+            Ok(point)
+        } else {
+            Err(EcError::InvalidPublicKey)
         }
     }
 }
@@ -119,10 +130,10 @@ impl Signature {
     }
 }
 
-impl<'a> VerifyingKey<'a> {
+impl<'a> PublicKey<'a> {
     /// Returns true if the parameters are consistent
     fn check_consistency(&self) -> bool {
-        let SigningParams { curve, order, .. } = &self.params;
+        let CurveParams { curve, order, .. } = &self.params;
         let is_public_infinite = self.public.is_infinity();
         let is_public_on_curve = self.public.is_part_of(curve);
         let n_public_is_infinite = self.public.mul(order.clone(), curve).is_infinity();
@@ -148,7 +159,7 @@ impl<'a> VerifyingKey<'a> {
             return Err(EcError::InvalidSignature);
         }
 
-        let SigningParams {
+        let CurveParams {
             curve, order: n, ..
         } = &self.params;
 
@@ -201,7 +212,7 @@ pub mod curves {
         /// P-256 NIST Curve described here:
         /// https://csrc.nist.gov/csrc/media/publications/fips/186/2/archive/2000-01-27/documents/fips186-2.pdf
         /// Is considered unsafe (http://safecurves.cr.yp.to/index.html)
-        pub static ref P256: SigningParams = {
+        pub static ref P256: CurveParams = {
             let p: BigInt =
                 "115792089210356248762697446949407573530086143415290314195533631308867097853951"
                     .parse()
@@ -231,7 +242,7 @@ pub mod curves {
             .unwrap();
             let curve = ec::Curve::new(a, b, p.to_biguint().unwrap()).unwrap();
             let gen = Point::new(x, y);
-            SigningParams { curve, gen, order }
+            CurveParams { curve, gen, order }
         };
     }
 }
@@ -244,7 +255,7 @@ mod tests {
 
     use super::*;
 
-    fn get_params() -> SigningParams {
+    fn get_params() -> CurveParams {
         let curve = Curve::new(
             BigInt::parse_bytes(
                 b"6277101735386680763835789423207666416083908700390324961276",
@@ -276,17 +287,17 @@ mod tests {
             .unwrap();
         let gen = Point::new(x, y);
 
-        SigningParams { curve, order, gen }
+        CurveParams { curve, order, gen }
     }
 
     #[test]
     fn ecdsa_sign_verify() {
         let params = get_params();
         let data = "👾";
-        let signer = SigningKey::random(rand::thread_rng(), &params);
+        let signer = PrivateKey::random(&params);
 
         let sig = signer.sign(rand::thread_rng(), data.as_bytes());
-        let verifier = signer.verifying_key();
+        let verifier = signer.public_key();
 
         verifier.verify(data.as_bytes(), &sig).unwrap();
     }
@@ -295,11 +306,11 @@ mod tests {
     fn ecdsa_sign_change_verify() {
         let params = get_params();
         let data = "👾";
-        let signer = SigningKey::random(rand::thread_rng(), &params);
+        let signer = PrivateKey::random(&params);
 
         let mut sig = signer.sign(rand::thread_rng(), data.as_bytes());
         sig.r += 1u32;
-        let verifier = signer.verifying_key();
+        let verifier = signer.public_key();
 
         verifier.verify(data.as_bytes(), &sig).unwrap_err();
     }
@@ -308,10 +319,10 @@ mod tests {
     fn ecdsa_p256_sign_verify() {
         let params = &curves::P256;
         let data = "👾";
-        let signer = SigningKey::random(rand::thread_rng(), params);
+        let signer = PrivateKey::random(params);
 
         let sig = signer.sign(rand::thread_rng(), data.as_bytes());
-        let verifier = signer.verifying_key();
+        let verifier = signer.public_key();
 
         verifier.verify(data.as_bytes(), &sig).unwrap();
     }
