@@ -32,6 +32,15 @@ pub mod gen {
     /// Generate Prime Number
     /// This function generates a prime number of n-bits using three primality
     /// tests.
+    ///
+    /// # Example
+    /// ```
+    /// use sec_primitives::prime::{gen, ver};
+    ///
+    /// // Generate 256-bit prime
+    /// let prime = gen::new_prime(256);
+    /// assert!(ver::is_prime(&prime));
+    /// ```
     pub fn new_prime(n: u64) -> BigUint {
         let mut rng = rand::thread_rng();
 

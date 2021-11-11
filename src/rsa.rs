@@ -1,3 +1,19 @@
+///! Rsa
+///!
+///! This module implements all rsa-dedicated logic. Only encryption with
+///! OAEP-SHA256 padding is supported.
+///!
+///! # Example
+///! ```
+///! use sec_primitives::rsa::generate_rsa_pair;
+///!
+///! let data = b"my fancy data";
+///! let (public, private) = generate_rsa_pair(1024).unwrap();
+///! let mut rng = rand::thread_rng();
+///! let ciphertext = public.encrypt_oaep_sha256(&mut rng, data).unwrap();
+///! let plaintext = private.decrypt_oaep_sha256(&ciphertext).unwrap();
+///! assert_eq!(plaintext, data);
+///! ```
 use num_bigint::BigUint;
 use num_traits::One;
 use rand::Rng;

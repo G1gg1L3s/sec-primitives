@@ -1,8 +1,21 @@
-//! This module contains ECDSA signature generation and verification.
-//! Originally, the challenge only required the signature generation, but I
-//! implemented verification as well, because I had to debug all these.
-//! Although, signature versification is done terribly wrong, because not all checks
-//! are included.
+//! ECDSA
+//!
+//! This module contains ECDSA signature and keys generation and verification.
+//!
+//! # Example
+//! ```rust
+//! use sec_primitives::ecdsa::{curves, PrivateKey};
+//!
+//! let params = &curves::P256;
+//! let data = "👾";
+//! let signer = PrivateKey::random(params);
+//!
+//! let sig = signer.sign(rand::thread_rng(), data.as_bytes());
+//! let verifier = signer.public_key();
+//!
+//! let result = verifier.verify(data.as_bytes(), &sig);
+//! assert!(result.is_ok());
+//! ```
 
 use num_bigint::{BigInt, RandBigInt, Sign};
 use num_integer::Integer;

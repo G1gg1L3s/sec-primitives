@@ -1,3 +1,49 @@
+//! Letter
+//! The Letter respresents the object, that allows communication with a use of
+//! hybrid cryptography. It encrypts message with a sender's private key
+//! and receiver's public key, so that only the receiver, that knows the
+//! sender's key, could decrypt the message.
+//!
+//! # Themis
+//! This is an analogue of SecureMessage in [themis](https://docs.cossacklabs.com/themis/crypto-theory/cryptosystems/secure-message/)
+//!
+//! # Under the hood
+//! 1) It derives shared secret from asymmetric keys using the ECDH key exchange.
+//! 2) It derives symmetric key from the shared secret
+//! 3) The letter encrypts the message using the Cell.
+//!
+//! # Usage
+//! ```
+//! use sec_primitives::{
+//!     ecdsa::{curves, PrivateKey, PublicKey},
+//!     letter::Letter
+//! };
+//!
+//! let curve = &curves::P256;
+//!
+//! let alice = PrivateKey::random(curve);
+//! let bob = PrivateKey::random(curve);
+//!
+//! // The key that alice will send to bob
+//! let alice_pub = alice.public_key();
+//! // The key that bob will send to alice
+//! let bob_pub = bob.public_key();
+//!
+//! // This what the alice would do
+//! let alice_to_bob = Letter::new(&alice, &bob_pub).unwrap();
+//! // This what the bob would do
+//! let bob_to_alice = Letter::new(&bob, &alice_pub).unwrap();
+//!
+//! let msg = "It was me who ate the cake";
+//!
+//! // bob encrypts and sends message to the alice
+//! let encrypted_letter = bob_to_alice.encrypt(msg.as_bytes()).unwrap();
+//!
+//! // alice decrypts the message from the bob
+//! let decrypted_letter = alice_to_bob.decrypt(&encrypted_letter).unwrap();
+//!
+//! assert_eq!(decrypted_letter, msg.as_bytes());
+//! ```
 use crate::{
     cell::{Cell, CellKey, AES_KEY_LEN},
     ec,
@@ -7,46 +53,6 @@ use crate::{
 use thiserror::Error;
 use zeroize::Zeroize;
 
-/// The Letter respresents the object, that allows communication with a use of
-/// asymmetric cryptography. It encrypts message with a sender's private key
-/// and receiver's public key, so that only the receiver, that knows the
-/// sender's key, could decrypt the message.
-///
-/// # Themis
-/// This is an analogue of SecureMessage in [themis](https://docs.cossacklabs.com/themis/crypto-theory/cryptosystems/secure-message/)
-///
-/// # Usage
-/// ```
-/// use sec_primitives::{
-///     ecdsa::{curves, PrivateKey, PublicKey},
-///     letter::Letter
-/// };
-///
-/// let curve = &curves::P256;
-///
-/// let alice = PrivateKey::random(curve);
-/// let bob = PrivateKey::random(curve);
-///
-/// // The key that alice will send to bob
-/// let alice_pub = alice.public_key();
-/// // The key that bob will send to alice
-/// let bob_pub = bob.public_key();
-///
-/// // This what the alice would do
-/// let alice_to_bob = Letter::new(&alice, &bob_pub).unwrap();
-/// // This what the bob would do
-/// let bob_to_alice = Letter::new(&bob, &alice_pub).unwrap();
-///
-/// let msg = "It was me who ate the cake";
-///
-/// // bob encrypts and sends message to the alice
-/// let encrypted_letter = bob_to_alice.encrypt(msg.as_bytes()).unwrap();
-///
-/// // alice decrypted the message from the bob
-/// let decrypted_letter = alice_to_bob.decrypt(&encrypted_letter).unwrap();
-///
-/// assert_eq!(decrypted_letter, msg.as_bytes());
-/// ```
 pub struct Letter {
     cell: Cell,
 }
