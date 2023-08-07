@@ -1,0 +1,33 @@
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "aarch64-unknown-linux-gnu" },
+    { triple = "aarch64-apple-darwin" },
+    { triple = "x86_64-apple-darwin" },
+    { triple = "aarch64-linux-android" },
+    { triple = "x86_64-linux-android" },
+    { triple = "armv7-linux-androideabi" },
+    { triple = "thumbv7neon-linux-androideabi" },
+    { triple = "i686-linux-android" },
+    { triple = "aarch64-apple-ios" },
+    { triple = "aarch64-apple-ios-sim" },
+    { triple = "x86_64-apple-ios" },
+    { triple = "wasm32-unknown-emscripten" },
+]
+
+[advisories]
+vulnerability = "deny"
+unmaintained = "deny"
+yanked = "deny"
+
+[licenses]
+allow = ["Apache-2.0", "MIT"]
+unlicensed = "deny"
+default = "deny"
+
+[bans]
+multiple-versions = "deny"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
