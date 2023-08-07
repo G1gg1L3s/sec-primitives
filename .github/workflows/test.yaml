@@ -54,7 +54,8 @@ jobs:
           # or when only runs from `master` should be saved to the cache.
           # default: "true"
           # To only cache runs from `master`:
-          save-if: ${{ github.ref == 'refs/head/master' }}
+          # save-if: ${{ github.ref == 'refs/head/master' }}
+          save-if: "true"
 
       - name: Install cargo deny
         run: cargo install cargo-deny
